@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "PNEX",
+    "slug": "pnex",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/pnex-logo.png",
+    "scheme": "pnex",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#0A0A0A",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "userInterfaceStyle": "dark"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/images/pnex-logo.png"
+    },
+    "android": {
+      "userInterfaceStyle": "dark",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/pnex-logo.png",
+        "backgroundColor": "#0A0A0A"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0A0A0A",
+          "resizeMode": "contain"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

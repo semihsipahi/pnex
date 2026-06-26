@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.expo/
+*.log
+.DS_Store
+*.tsbuildinfo
+pnpm-lock.yaml
+
+# Dev screenshots
+*.png
+!assets/**/*.png
