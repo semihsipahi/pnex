@@ -39,3 +39,4 @@ Likely a web dashboard (Next.js or similar).
 - Each sub-project has its own `AGENTS.md` with project-specific details
 - Shared config (CI, linting, etc.) may be added at root level as the monorepo grows
 - No monorepo tooling yet (pnpm workspace, turborepo, etc.) — to be evaluated as sub-projects materialize
+test: repo rename doğrulama
