@@ -11,8 +11,6 @@ type Props = {
 
 export function SplashScreen({ onFinish }: Props) {
   const logoOpacity = useRef(new Animated.Value(0)).current
-  const logoScale = useRef(new Animated.Value(1.18)).current
-  const imageZoom = useRef(new Animated.Value(1)).current
   const sweep = useRef(new Animated.Value(0)).current
   const tagline = useRef(new Animated.Value(0)).current
   const lockProgress = useRef(new Animated.Value(0)).current
@@ -29,8 +27,6 @@ export function SplashScreen({ onFinish }: Props) {
 
     Animated.parallel([
       Animated.timing(logoOpacity, { toValue: 1, duration: 2200, useNativeDriver: true }),
-      Animated.timing(logoScale, { toValue: 1, duration: 2800, useNativeDriver: true }),
-      Animated.timing(imageZoom, { toValue: 1.06, duration: 7500, useNativeDriver: true }),
       Animated.sequence([
         Animated.delay(1400),
         Animated.timing(sweep, { toValue: 1, duration: 2800, useNativeDriver: true }),
@@ -78,10 +74,10 @@ export function SplashScreen({ onFinish }: Props) {
   return (
     <Animated.View style={[styles.container, { opacity: fadeOut }]}>
       <View style={styles.center}>
-        <Animated.View style={[styles.logoWrap, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
-          <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: imageZoom }] }]}>
-            <Image source={require("@/assets/images/pnex-logo.png")} style={styles.logo} resizeMode="contain" />
-          </Animated.View>
+        <Animated.View style={[styles.logoWrap, { opacity: logoOpacity }]}>
+          <Image source={require("@/assets/images/pnex-logo.png")} style={styles.logo} resizeMode="contain" />
+
+          {/* Sweep shimmer */}
           <Animated.View
             style={[
               styles.sweep,

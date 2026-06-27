@@ -1,30 +1,29 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import {
   View,
   Text,
   StyleSheet,
   TextInput,
   Pressable,
-  KeyboardAvoidingView,
-  Platform,
   Image,
   ActivityIndicator,
+  Keyboard,
 } from "react-native"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons } from "@expo/vector-icons"
+import * as Haptics from "expo-haptics"
 import Animated, {
   FadeInDown,
-  FadeIn,
-  Easing,
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withSpring,
   interpolate,
   Extrapolation,
 } from "react-native-reanimated"
-import { Colors, Fonts, Spacing, Radius } from "@/constants/theme"
+import { Colors, Fonts, Spacing, Radius, Tracking, TypeSize } from "@/constants/theme"
 
 function formatPhone(text: string) {
   const digits = text.replace(/[^0-9]/g, "").slice(0, 10)
@@ -33,6 +32,8 @@ function formatPhone(text: string) {
   if (digits.length <= 8) return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`
   return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 8)} ${digits.slice(8)}`
 }
+
+
 
 export default function Login() {
   const router = useRouter()
@@ -44,7 +45,6 @@ export default function Login() {
 
   const raw = phone.replace(/[^0-9]/g, "")
   const isValid = raw.length === 10
-  // Bottom line animation
   const lineWidth = useSharedValue(0)
 
   useEffect(() => {
@@ -55,20 +55,35 @@ export default function Login() {
     width: `${interpolate(lineWidth.value, [0, 1], [0, 100], Extrapolation.CLAMP)}%` as any,
   }))
 
+  const buttonScale = useSharedValue(1)
   const buttonShimmer = useSharedValue(0)
 
-  const triggerButtonShimmer = () => {
-    buttonShimmer.value = 0
-    buttonShimmer.value = withTiming(1, { duration: 400, easing: Easing.out(Easing.cubic) })
-  }
+  const buttonAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: buttonScale.value }],
+  }))
 
   const buttonShimmerStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: interpolate(buttonShimmer.value, [0, 1], [-200, 400], Extrapolation.CLAMP) }],
   }))
 
-  const handleSubmit = () => {
-    if (!isValid) return
+  const triggerButtonShimmer = useCallback(() => {
+    buttonShimmer.value = 0
+    buttonShimmer.value = withTiming(1, { duration: 400 })
+  }, [buttonShimmer])
+
+  const handlePressIn = () => {
+    buttonScale.value = withSpring(0.96)
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+  }
+
+  const handlePressOut = () => {
+    buttonScale.value = withSpring(1)
+  }
+
+  const handleSubmit = useCallback(() => {
+    if (!isValid || loading) return
     triggerButtonShimmer()
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     setLoading(true)
     setTimeout(() => {
       setLoading(false)
@@ -78,6 +93,15 @@ export default function Login() {
         router.push("/(auth)/gate")
       }
     }, 800)
+  }, [isValid, loading, raw, router, triggerButtonShimmer])
+
+  const handleDone = useCallback(() => {
+    Keyboard.dismiss()
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+  }, [])
+
+  const handleChangeText = (t: string) => {
+    setPhone(formatPhone(t))
   }
 
   return (
@@ -90,49 +114,49 @@ export default function Login() {
         />
       </View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
-        <View style={[styles.content, { paddingTop: insets.top + Spacing.xxl }]}>
-          <View style={styles.spacerTop} />
+      <View style={[styles.content, { paddingTop: insets.top + Spacing.sm }]}>
+        {/* Top section — background PNEX text shows here */}
+        <View style={styles.topSection} />
 
-          {/* Form */}
-          <Animated.View entering={FadeInDown.delay(200).duration(700)} style={[styles.form, { marginTop: 220 }]}>
-            <View style={styles.field}>
-              <Pressable onPress={() => inputRef.current?.focus()} style={styles.inputOuter}>
-                <View style={styles.inputRow}>
-                  <Text style={styles.prefix}>+90</Text>
-                  <View style={styles.prefixDot} />
-                  <TextInput
-                    ref={inputRef}
-                    value={phone}
-                    onChangeText={(t) => setPhone(formatPhone(t))}
-                    placeholder="5XX XXX XX XX"
-                    placeholderTextColor="rgba(255,255,255,0.15)"
-                    keyboardType="phone-pad"
-                    autoFocus
-                    style={styles.input}
-                    selectionColor={Colors.gold}
-                    onFocus={() => setFocused(true)}
-                    onBlur={() => setFocused(false)}
-                  />
-                  {raw.length === 10 && (
-                    <Animated.View entering={FadeIn.duration(200)}>
-                      <Ionicons name="checkmark-circle" size={20} color="#2E7D5B" />
-                    </Animated.View>
-                  )}
-                </View>
-                {/* Animated bottom line */}
-                <Animated.View style={[styles.bottomLine, bottomLineStyle]} />
-              </Pressable>
-            </View>
-          </Animated.View>
+        {/* Form — centered */}
+        <Animated.View entering={FadeInDown.delay(200).duration(700)} style={styles.form}>
+          <View style={styles.field}>
+            <Pressable onPress={() => inputRef.current?.focus()} style={styles.inputOuter}>
+              <View style={styles.inputRow}>
+                <Text style={styles.prefix}>+90</Text>
+                <View style={styles.prefixDot} />
+                <TextInput
+                  ref={inputRef}
+                  value={phone}
+                  onChangeText={handleChangeText}
+                  placeholder="5XX XXX XX XX"
+                  placeholderTextColor="rgba(255,255,255,0.15)"
+                  keyboardType="phone-pad"
+                  returnKeyType="done"
+                  autoFocus
+                  style={styles.input}
+                  selectionColor={Colors.gold}
+                  onFocus={() => setFocused(true)}
+                  onBlur={() => setFocused(false)}
+                  onSubmitEditing={handleDone}
+                />
+              </View>
+              <Animated.View style={[styles.bottomLine, bottomLineStyle]} />
+            </Pressable>
+          </View>
+        </Animated.View>
 
-          <View style={styles.spacerBottom} />
+        {/* Bottom section */}
+        <View style={styles.bottomSection} />
 
-          {/* Footer */}
-          <Animated.View entering={FadeInDown.delay(400).duration(700)} style={styles.footer}>
+        {/* Footer */}
+        <Animated.View entering={FadeInDown.delay(400).duration(700)} style={styles.footer}>
+          <Animated.View style={buttonAnimatedStyle}>
             <Pressable
               style={[styles.button, !isValid && styles.buttonDisabled]}
               onPress={handleSubmit}
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut}
               disabled={!isValid || loading}
             >
               <LinearGradient
@@ -149,7 +173,6 @@ export default function Login() {
                   </Text>
                 )}
               </LinearGradient>
-              {/* Press shimmer — light sweep across the button */}
               <Animated.View style={[styles.btnShimmer, buttonShimmerStyle]} pointerEvents="none">
                 <LinearGradient
                   colors={["transparent", "rgba(255,255,255,0.4)", "transparent"]}
@@ -159,16 +182,19 @@ export default function Login() {
                 />
               </Animated.View>
             </Pressable>
-
-            <View style={styles.assurance}>
-              <Ionicons name="lock-closed" size={11} color="rgba(255,255,255,0.3)" />
-              <Text style={styles.assuranceText}>
-                Uçtan uca şifreli · Davetiye ile
-              </Text>
-            </View>
           </Animated.View>
-        </View>
-      </KeyboardAvoidingView>
+
+          <View style={styles.assurance}>
+            <Ionicons name="lock-closed" size={11} color="rgba(255,255,255,0.3)" />
+            <Text style={styles.assuranceText}>
+              Uçtan uca şifreli · Davetiye ile
+            </Text>
+          </View>
+        </Animated.View>
+
+        {/* Bottom padding — pushes footer up */}
+        <View style={styles.bottomPadding} />
+      </View>
     </View>
   )
 }
@@ -178,23 +204,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#070707",
   },
-  flex: { flex: 1 },
 
   content: {
     flex: 1,
     paddingHorizontal: Spacing.lg,
   },
-  spacerTop: { flex: 0.9 },
-  spacerBottom: { flex: 0.6 },
-  form: { marginTop: Spacing.lg },
-  field: { gap: 10 },
+
+  topSection: { flex: 1.2 },
+  bottomSection: { flex: 0.5 },
+  bottomPadding: { flex: 0.5 },
+
+  form: {},
+  field: { gap: Spacing.sm },
   inputOuter: {
     position: "relative",
-    height: 60,
+    height: 58,
     borderRadius: Radius.sm,
-    backgroundColor: "rgba(255,255,255,0.03)",
+    backgroundColor: "rgba(255,255,255,0.04)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(255,255,255,0.08)",
     paddingHorizontal: Spacing.md,
     justifyContent: "center",
     overflow: "hidden",
@@ -202,19 +230,20 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
   },
   prefix: {
     fontFamily: Fonts.sansMedium,
     fontWeight: "500",
     fontSize: 15,
     color: Colors.gold,
+    letterSpacing: Tracking.label,
   },
   prefixDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
   input: {
     flex: 1,
@@ -222,20 +251,28 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.sansMedium,
     fontWeight: "500",
     fontSize: 17,
-    letterSpacing: 2,
+    letterSpacing: 3,
     height: 40,
   },
   bottomLine: {
     position: "absolute",
     bottom: 0,
-    left: 0,
+    left: 12,
+    right: 12,
     height: 1.5,
     backgroundColor: Colors.gold,
     borderRadius: 1,
   },
+  btnShimmer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "50%",
+    height: "100%",
+    opacity: 0.9,
+  },
   footer: {
     gap: Spacing.md,
-    paddingBottom: Spacing.xxl,
   },
   button: {
     height: 56,
@@ -261,14 +298,6 @@ const styles = StyleSheet.create({
   },
   buttonTextDisabled: {
     color: "rgba(255,255,255,0.2)",
-  },
-  btnShimmer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "50%",
-    height: "100%",
-    opacity: 0.9,
   },
   assurance: {
     flexDirection: "row",

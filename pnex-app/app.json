@@ -4,7 +4,7 @@
     "slug": "pnex",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/pnex-logo.png",
+    "icon": "./assets/images/app_icon.png",
     "scheme": "pnex",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
@@ -14,17 +14,21 @@
     },
     "ios": {
       "supportsTablet": true,
-      "userInterfaceStyle": "dark"
+      "userInterfaceStyle": "dark",
+      "bundleIdentifier": "com.pnex.app",
+      "infoPlist": {
+        "CFBundleIconName": "AppIcon"
+      }
     },
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/images/pnex-logo.png"
+      "favicon": "./assets/images/app_icon.png"
     },
     "android": {
       "userInterfaceStyle": "dark",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/pnex-logo.png",
+        "foregroundImage": "./assets/images/app_icon.png",
         "backgroundColor": "#0A0A0A"
       }
     },
