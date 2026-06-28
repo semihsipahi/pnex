@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react"
 import { View, Text, StyleSheet, Dimensions, Image, Animated } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"
+import * as Haptics from "expo-haptics"
 import { Colors, Fonts } from "@/constants/theme"
 
 const { width } = Dimensions.get("window")
@@ -43,6 +44,7 @@ export function SplashScreen({ onFinish }: Props) {
 
     const t = setTimeout(() => {
       Animated.timing(fadeOut, { toValue: 0, duration: 1000, useNativeDriver: true }).start(() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
         onFinish?.()
       })
     }, 8500)
