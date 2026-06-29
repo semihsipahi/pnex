@@ -1,12 +1,18 @@
 #import "AppDelegate.h"
 
+#import <React/RCTBridgeModule.h>
 #import <React/RCTBundleURLProvider.h>
 #import <React/RCTLinkingManager.h>
+
+@interface RNHaptics : NSObject <RCTBridgeModule>
+@end
 
 @implementation AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
+  RCTRegisterModule([RNHaptics class]);
+
   self.moduleName = @"main";
 
   // You can add your custom initial props in the dictionary below.

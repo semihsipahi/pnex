@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons } from "@expo/vector-icons"
 import Animated, { FadeInDown } from "react-native-reanimated"
-import * as Haptics from "expo-haptics"
+import { triggerImpact, triggerNotification } from "@/utils/haptics"
+import { Platform } from "react-native"
 import { Colors, Fonts, Spacing, Radius, Tracking, TypeSize } from "@/constants/theme"
 
 const { width } = Dimensions.get("window")
@@ -163,7 +164,10 @@ export default function Wall() {
   const [deals, setDeals] = useState(INITIAL_DEALS)
 
   useEffect(() => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    console.log("[WALL] mounted, platform:", Platform.OS, "triggering haptic...")
+    triggerImpact()
+    triggerNotification()
+    console.log("[WALL] haptic called")
   }, [])
 
   useEffect(() => {

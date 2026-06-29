@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
+import { triggerImpact } from "@/utils/haptics"
 import Animated, {
   FadeInDown,
   useSharedValue,
@@ -83,6 +84,8 @@ export default function Verify() {
     setLoading(true)
     setTimeout(() => {
       setLoading(false)
+      console.log("[VERIFY] navigating to wall, firing haptic...")
+      triggerImpact()
       router.replace("/(tabs)/wall")
     }, 1200)
   }

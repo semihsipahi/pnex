@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
+import { triggerImpact } from "@/utils/haptics"
 import Animated, {
   FadeIn,
   useSharedValue,
@@ -122,6 +123,8 @@ export default function Login() {
     setTimeout(() => {
       setLoading(false)
       if (raw === "5555555555") {
+        console.log("[LOGIN] dev shortcut → wall, firing haptic...")
+        triggerImpact()
         router.replace("/(tabs)/wall")
       } else {
         router.push({ pathname: "/(auth)/gate", params: { phone: raw } })

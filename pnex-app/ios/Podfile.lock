@@ -13,6 +13,8 @@ PODS:
     - ExpoModulesCore
   - ExpoFont (13.0.4):
     - ExpoModulesCore
+  - ExpoHaptics (14.0.1):
+    - ExpoModulesCore
   - ExpoHead (4.0.22):
     - ExpoModulesCore
   - ExpoKeepAwake (14.0.3):
@@ -1834,6 +1836,7 @@ DEPENDENCIES:
   - "ExpoBlur (from `../node_modules/.pnpm/expo-blur@14.0.3_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babel+core@7_8c4947f6e78b87789fed1bb96e44630f/node_modules/expo-blur/ios`)"
   - "ExpoFileSystem (from `../node_modules/.pnpm/expo-file-system@18.0.12_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babe_59495f2b8fc08b29f72475e8eb7081e2/node_modules/expo-file-system/ios`)"
   - "ExpoFont (from `../node_modules/.pnpm/expo-font@13.0.4_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babel+core@7_d9ee27136db6008240cc7dc9bae9328e/node_modules/expo-font/ios`)"
+  - "ExpoHaptics (from `../node_modules/.pnpm/expo-haptics@14.0.1_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babel+cor_8a537f172b6866170fe3cbafcd8ea3d4/node_modules/expo-haptics/ios`)"
   - "ExpoHead (from `../node_modules/.pnpm/expo-router@4.0.22_350788ed6aea2a53894c52bb1475625f/node_modules/expo-router/ios`)"
   - "ExpoKeepAwake (from `../node_modules/.pnpm/expo-keep-awake@14.0.3_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babel+_20956268070b89d66f693b0a8f3e90e9/node_modules/expo-keep-awake/ios`)"
   - "ExpoLinearGradient (from `../node_modules/.pnpm/expo-linear-gradient@14.0.2_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@b_3153e35eccc69b2a31e1c977db19f934/node_modules/expo-linear-gradient/ios`)"
@@ -1930,6 +1933,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/.pnpm/expo-file-system@18.0.12_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babe_59495f2b8fc08b29f72475e8eb7081e2/node_modules/expo-file-system/ios"
   ExpoFont:
     :path: "../node_modules/.pnpm/expo-font@13.0.4_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babel+core@7_d9ee27136db6008240cc7dc9bae9328e/node_modules/expo-font/ios"
+  ExpoHaptics:
+    :path: "../node_modules/.pnpm/expo-haptics@14.0.1_expo@52.0.49_@babel+core@7.29.7_@babel+preset-env@7.29.7_@babel+cor_8a537f172b6866170fe3cbafcd8ea3d4/node_modules/expo-haptics/ios"
   ExpoHead:
     :path: "../node_modules/.pnpm/expo-router@4.0.22_350788ed6aea2a53894c52bb1475625f/node_modules/expo-router/ios"
   ExpoKeepAwake:
@@ -2085,6 +2090,7 @@ SPEC CHECKSUMS:
   ExpoBlur: 392c1207f71d0ecf22371621c1fbd44ba84d9742
   ExpoFileSystem: 42d363d3b96f9afab980dcef60d5657a4443c655
   ExpoFont: f354e926f8feae5e831ec8087f36652b44a0b188
+  ExpoHaptics: 8d199b2f33245ea85289ff6c954c7ee7c00a5b5d
   ExpoHead: 2a14db58219c0a506e4a409ea83f884eab23f555
   ExpoKeepAwake: b0171a73665bfcefcfcc311742a72a956e6aa680
   ExpoLinearGradient: 35ebd83b16f80b3add053a2fd68cc328ed927f60

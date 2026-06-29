@@ -16,6 +16,7 @@
 		B18059E884C0ABDD17F3DC3D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		E70AFCEF1BB5EA366FCFE96A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C1CFEDA6675C623FE9C7481C /* PrivacyInfo.xcprivacy */; };
+		18844B583E114FF9A74CEC71 /* RNHaptics.m in Sources */ = {isa = PBXBuildFile; fileRef = C309433BDB5A452E8AFC18CC /* RNHaptics.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,6 +36,7 @@
 		C537935AD7C74E48BF661B62 /* noop-file.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = "noop-file.swift"; path = "PNEX/noop-file.swift"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-PNEX/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		C309433BDB5A452E8AFC18CC /* RNHaptics.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = "RNHaptics.m"; path = "PNEX/RNHaptics.m"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -327,6 +329,7 @@
 				13B07FC11A68108700A75B9A /* main.m in Sources */,
 				B18059E884C0ABDD17F3DC3D /* ExpoModulesProvider.swift in Sources */,
 				860D0176F5834A04A8451574 /* noop-file.swift in Sources */,
+				18844B583E114FF9A74CEC71 /* RNHaptics.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
