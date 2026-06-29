@@ -22,6 +22,13 @@ pnex/
 **Commands**: `pnpm dev`, `pnpm build`, `pnpm typecheck`
 See `pnex-app/AGENTS.md` for full detail.
 
+### pnex-app-figma (existing)
+**Stack**: Vite 6 + React 18 + Framer Motion (motion) + Tailwind CSS v4 + shadcn/ui
+**Purpose**: Figma tasarım referans uygulaması — Splash, Login, Gate, Verify, Duvar/Ağ/Hesap tabları
+**Status**: Tüm ekranlar tek `App.tsx`'de state-based routing ile çalışır. Splash → Login → Gate → Verify → MainApp akışı.
+**Key features**: Vault door splash efekti (logo ikiye ayrılır), premium dark tema (altın/gri), animated cell/caret girişleri.
+**Notes**: Tasarım referansı olarak kullanılır. pnex-app'e port edilecek screen'ler bu projeden alınır.
+
 ### pnex-api (planned)
 Backend service — will serve pnex-app, pnex-crm, and external integrations.
 Tech stack TBD (likely Node.js/NestJS or Go).
@@ -39,4 +46,5 @@ Likely a web dashboard (Next.js or similar).
 - Each sub-project has its own `AGENTS.md` with project-specific details
 - Shared config (CI, linting, etc.) may be added at root level as the monorepo grows
 - No monorepo tooling yet (pnpm workspace, turborepo, etc.) — to be evaluated as sub-projects materialize
+- **Code trial principle**: When a solution is written, tested by the user, and reported as not working, the old code MUST be fully removed from source before a new approach is attempted. Never leave dead/broken code paths in the file.
 test: repo rename doğrulama

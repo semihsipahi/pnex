@@ -13,11 +13,11 @@ export const Colors = {
   obsidianSoft: "#121110",
   onyx: "#1A1714",
 
-  // Gold accents
-  gold: "#C9A24B",
-  goldBright: "#E7C778",
-  goldDeep: "#9C7C30",
-  goldFaint: "rgba(201,162,75,0.14)",
+  // Gold accents (figma palette — updated 2026-06-28)
+  gold: "#D4AF37",
+  goldBright: "#F3E5AB",
+  goldDeep: "#997A15",
+  goldFaint: "rgba(212,175,55,0.08)",
 
   // Light premium palette (in-app body)
   paper: "#FBFAF8",

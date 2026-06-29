@@ -135,25 +135,33 @@ interface RequestNotification {
 
 ## Screen by screen — current state (Aşama 1 complete)
 
-### SplashScreen
-- Dark background (Colors.obsidian)
-- PNEX logo (`pnex-logo.png`) centered, fade-in + scale animation
-- Gold shimmer sweep effect across logo
-- Tagline fades in at bottom: "— ENCRYPTED · INVITATION ONLY —"
-- Auto-dismisses after ~8.5s with fade-out
+### SplashScreen — Vault Door (from pnex-app-figma)
+- **Siyah perde açılması**: curtain opacity 1→0 (2.8s)
+- **5 adet parıltı şeridi**: logo üzerinde sırayla geçen beyaz ışık çizgileri (t=1.8s–3.4s)
+- **Vault door efekti**: PNEX logosu ortadan ikiye ayrılır — üst yarı yukarı (translateY: -50%), alt yarı aşağı (translateY: +50%) kayar (t=4.2s, 1.4s, bezier easing)
+- **Altın ışık çizgisi**: logo ortasında beliren horizontal gold flash (seam)
+- Tagline: "INVITATION ONLY" — fade in t=1.8s, fade out t=4.2s
+- Toplam süre: ~5.6s, Reanimated ile implemente edildi
 
 ### Login (`(auth)/login.tsx`)
-- Full-screen background image (`login-bg.png`) with `resizeMode="cover"`
-- "NEXA" logo text and "GÜVENLİ ÖZEL AĞ" tagline removed (only background visible)
-- Phone input (+90 prefix) with format mask, animated gold bottom line
+- Full-screen background image (`pnex-logo.png`) with `resizeMode="cover"` (splash ile aynı görsel)
+- Bottom gradient overlay: transparent → %92 black → solid black, kaplama %55
+- "Telefon Numarası" label (uppercase)
+- +90 prefix (gold) + separator line + phone input (clean bottom-border only)
+- Animated gold bottom line on focus (Reanimated)
 - "İlerle" button with shimmer effect
 - Dev shortcut: `5555555555` → straight to tabs
-- `Image.getSize` debug removed (crashed iOS)
-- Input positioned with `marginTop: 220` + spacer
+- Footer: lock icon + "UÇTAN UCA ŞİFRELİ · DAVETİYE İLE"
 
 ### Gate (`(auth)/gate.tsx`)
-- 6-digit passcode entry (dots UI)
-- "NEXA" branding
+- **Logo hero background** (üst %44): pnex-logo.png, bottom gradient fade to black
+- Back button (absolute, rounded, semi-transparent)
+- Badge: "Sadece Üyeler · Davetiye İle"
+- Title: "Davetiye Kodunuz" + subtitle
+- Gold separator line with dot
+- **6 hücreli kod girişi**: animated caret (blinking), spring scale character entry, gold border/glow on active
+- "Erişim Talebi" button (disabled until 6 chars)
+- "Davetiyeniz yok mu? Bekleme listesine katıl →"
 
 ### Wall — Duvar (`(tabs)/wall.tsx`)
 - **Hero section**: "PNEX" logo + "Private Network" subtitle + notification bell
@@ -233,7 +241,7 @@ Dev shortcut: phone `5555555555` → straight to `(tabs)/wall` (bypasses gate + 
 - **Fonts**: `expo-google-fonts` (Cormorant Garamond), system sans-serif
 
 ## Design tokens (`constants/theme.ts`)
-- **Auth palette** (dark): `Colors.obsidian` (#0A0A0A), `Colors.gold` (#C9A24B)
+- **Auth palette** (dark): `Colors.obsidian` (#0A0A0A), `Colors.gold` (#D4AF37 — figma palette)
 - **In-app palette** (light): `Colors.paper` (#FBFAF8), `Colors.ink` (#16140F)
 - **Semantic colors**: `goldFaint`, `goldDeep`, `goldBright`, `paperAlt`, `card`, `hairline`, `hairlineStrong`, `inkSoft`, `inkFaint`, `danger`, `success`, `onyx`, `white`
 
@@ -250,8 +258,8 @@ Dev shortcut: phone `5555555555` → straight to `(tabs)/wall` (bypasses gate + 
 - All data is static/mock — no API calls (separate project)
 
 ## Assets
-- `assets/images/pnex-logo.png` — PNEX brand logo (splash screen)
-- `assets/images/login-bg.png` — Login screen background
+- `assets/images/pnex-logo.png` — PNEX brand logo (splash screen, login background, gate hero)
+- `assets/images/login-bg.png` — Legacy, replaced by pnex-logo.png (can be removed)
 - `assets/images/wall-hero.png` — Wall page hero background
 - `assets/images/nexa.png` — Legacy, not used anymore (replaced by pnex-logo)
 
@@ -266,12 +274,12 @@ Dev shortcut: phone `5555555555` → straight to `(tabs)/wall` (bypasses gate + 
 - `app/(tabs)/network.tsx` — Ağ directory + talep modal + invite card
 - `app/(tabs)/account.tsx` — Profile + invite modal
 - `app/(tabs)/_layout.tsx` — Tabs layout (wall, network, account)
-- `app/(auth)/login.tsx` — Login screen with background image
-- `app/(auth)/gate.tsx` — 6-digit passcode entry
-- `app/(auth)/verify.tsx` — 4-digit OTP verification
+- `app/(auth)/login.tsx` — Login screen (figma port: gradient overlay, label, clean input)
+- `app/(auth)/gate.tsx` — Invitation code entry (figma port: hero bg, animated cells, back btn)
+- `app/(auth)/verify.tsx` — OTP verification (figma port: large boxes, masked phone, blinking caret)
 - `components/TabBar.tsx` — Bottom tab bar (3 tabs + center +)
 - `components/NewDealModal.tsx` — Create listing form (premium + max bid + expiry)
-- `components/SplashScreen.tsx` — Custom splash with logo/shine animation
+- `components/SplashScreen.tsx` — Custom splash with vault door effect (figma port)
 - `components/GoldButton.tsx` — Reusable gold gradient button
 - `components/Divider.tsx` — Ornamental divider with optional label
 - `constants/theme.ts` — Design tokens

@@ -8,6 +8,8 @@ import {
   Image,
   ActivityIndicator,
   Keyboard,
+  Platform,
+  Dimensions,
 } from "react-native"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -15,15 +17,18 @@ import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
 import Animated, {
-  FadeInDown,
+  FadeIn,
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   withSpring,
   interpolate,
   Extrapolation,
+  Easing,
 } from "react-native-reanimated"
-import { Colors, Fonts, Spacing, Radius, Tracking, TypeSize } from "@/constants/theme"
+import { Colors, Fonts, Spacing } from "@/constants/theme"
+
+const { width } = Dimensions.get("window")
 
 function formatPhone(text: string) {
   const digits = text.replace(/[^0-9]/g, "").slice(0, 10)
@@ -32,8 +37,6 @@ function formatPhone(text: string) {
   if (digits.length <= 8) return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`
   return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 8)} ${digits.slice(8)}`
 }
-
-
 
 export default function Login() {
   const router = useRouter()
@@ -47,9 +50,40 @@ export default function Login() {
   const isValid = raw.length === 10
   const lineWidth = useSharedValue(0)
 
+  const keyboardTranslateY = useSharedValue(0)
+
   useEffect(() => {
-    lineWidth.value = withTiming(focused ? 1 : 0, { duration: 350 })
+    lineWidth.value = withTiming(focused ? 1 : 0, { duration: 400 })
   }, [focused])
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      (e) => {
+        keyboardTranslateY.value = withTiming(-e.endCoordinates.height * 0.75, {
+          duration: 320,
+          easing: Easing.bezier(0.16, 1, 0.3, 1),
+        })
+      },
+    )
+    const hideSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => {
+        keyboardTranslateY.value = withTiming(0, {
+          duration: 320,
+          easing: Easing.bezier(0.16, 1, 0.3, 1),
+        })
+      },
+    )
+    return () => {
+      showSub.remove()
+      hideSub.remove()
+    }
+  }, [])
+
+  const contentStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: keyboardTranslateY.value }],
+  }))
 
   const bottomLineStyle = useAnimatedStyle(() => ({
     width: `${interpolate(lineWidth.value, [0, 1], [0, 100], Extrapolation.CLAMP)}%` as any,
@@ -90,7 +124,7 @@ export default function Login() {
       if (raw === "5555555555") {
         router.replace("/(tabs)/wall")
       } else {
-        router.push("/(auth)/gate")
+        router.push({ pathname: "/(auth)/gate", params: { phone: raw } })
       }
     }, 800)
   }, [isValid, loading, raw, router, triggerButtonShimmer])
@@ -106,25 +140,36 @@ export default function Login() {
 
   return (
     <View style={styles.container}>
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <Image
-          source={require("@/assets/images/login-bg.png")}
-          style={{ width: "100%", height: "100%" }}
-          resizeMode="cover"
+      <Animated.View style={[styles.wrapper, contentStyle]}>
+        {/* Full screen background */}
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Image
+            source={require("@/assets/images/pnex-logo.png")}
+            style={{ width: "100%", height: "100%" }}
+            resizeMode="cover"
+          />
+        </View>
+
+        {/* Bottom gradient overlay */}
+        <LinearGradient
+          colors={["transparent", "rgba(0,0,0,0.92)", "#000000"]}
+          locations={[0, 0.4, 0.7]}
+          style={styles.gradientOverlay}
+          pointerEvents="none"
         />
-      </View>
 
-      <View style={[styles.content, { paddingTop: insets.top + Spacing.sm }]}>
-        {/* Top section — background PNEX text shows here */}
-        <View style={styles.topSection} />
+        {/* Form content at bottom */}
+        <View style={[styles.formWrap, { paddingBottom: Math.max(insets.bottom, 16) + Spacing.lg }]}>
+          <Animated.View
+            entering={FadeIn.duration(1000).delay(400)}
+            style={styles.formInner}
+          >
+            <Text style={styles.label}>Telefon Numarası</Text>
 
-        {/* Form — centered */}
-        <Animated.View entering={FadeInDown.delay(200).duration(700)} style={styles.form}>
-          <View style={styles.field}>
-            <Pressable onPress={() => inputRef.current?.focus()} style={styles.inputOuter}>
+            <View style={styles.inputOuter}>
               <View style={styles.inputRow}>
                 <Text style={styles.prefix}>+90</Text>
-                <View style={styles.prefixDot} />
+                <View style={styles.separator} />
                 <TextInput
                   ref={inputRef}
                   value={phone}
@@ -142,59 +187,54 @@ export default function Login() {
                 />
               </View>
               <Animated.View style={[styles.bottomLine, bottomLineStyle]} />
-            </Pressable>
-          </View>
-        </Animated.View>
+            </View>
 
-        {/* Bottom section */}
-        <View style={styles.bottomSection} />
-
-        {/* Footer */}
-        <Animated.View entering={FadeInDown.delay(400).duration(700)} style={styles.footer}>
-          <Animated.View style={buttonAnimatedStyle}>
-            <Pressable
-              style={[styles.button, !isValid && styles.buttonDisabled]}
-              onPress={handleSubmit}
-              onPressIn={handlePressIn}
-              onPressOut={handlePressOut}
-              disabled={!isValid || loading}
-            >
-              <LinearGradient
-                colors={isValid ? [Colors.goldDeep, Colors.gold, Colors.goldBright] : ["rgba(255,255,255,0.04)", "rgba(255,255,255,0.04)"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.buttonFill}
+            <Animated.View style={buttonAnimatedStyle}>
+              <Pressable
+                style={[styles.button, !isValid && styles.buttonDisabled]}
+                onPress={handleSubmit}
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+                disabled={!isValid || loading}
               >
-                {loading ? (
-                  <ActivityIndicator color={Colors.obsidian} size="small" />
-                ) : (
-                  <Text style={[styles.buttonText, !isValid && styles.buttonTextDisabled]}>
-                    İlerle
-                  </Text>
-                )}
-              </LinearGradient>
-              <Animated.View style={[styles.btnShimmer, buttonShimmerStyle]} pointerEvents="none">
                 <LinearGradient
-                  colors={["transparent", "rgba(255,255,255,0.4)", "transparent"]}
+                  colors={
+                    isValid
+                      ? [Colors.goldDeep, Colors.gold, Colors.goldBright]
+                      : ["rgba(255,255,255,0.04)", "rgba(255,255,255,0.04)"]
+                  }
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
-                  style={{ flex: 1 }}
-                />
-              </Animated.View>
-            </Pressable>
+                  style={styles.buttonFill}
+                >
+                  {loading ? (
+                    <ActivityIndicator color={Colors.obsidian} size="small" />
+                  ) : (
+                    <Text style={[styles.buttonText, !isValid && styles.buttonTextDisabled]}>
+                      İlerle
+                    </Text>
+                  )}
+                </LinearGradient>
+                <Animated.View style={[styles.btnShimmer, buttonShimmerStyle]} pointerEvents="none">
+                  <LinearGradient
+                    colors={["transparent", "rgba(255,255,255,0.4)", "transparent"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{ flex: 1 }}
+                  />
+                </Animated.View>
+              </Pressable>
+            </Animated.View>
+
+            <View style={styles.assurance}>
+              <Ionicons name="lock-closed" size={12} color="rgba(255,255,255,0.3)" />
+              <Text style={styles.assuranceText}>
+                UÇTAN UCA ŞİFRELİ · DAVETİYE İLE
+              </Text>
+            </View>
           </Animated.View>
-
-          <View style={styles.assurance}>
-            <Ionicons name="lock-closed" size={11} color="rgba(255,255,255,0.3)" />
-            <Text style={styles.assuranceText}>
-              Uçtan uca şifreli · Davetiye ile
-            </Text>
-          </View>
-        </Animated.View>
-
-        {/* Bottom padding — pushes footer up */}
-        <View style={styles.bottomPadding} />
-      </View>
+        </View>
+      </Animated.View>
     </View>
   )
 }
@@ -202,66 +242,79 @@ export default function Login() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1C1C1C",
+    backgroundColor: Colors.black,
   },
-
-  content: {
-    flex: 1,
-    paddingHorizontal: Spacing.lg,
+  wrapper: {
+    ...StyleSheet.absoluteFillObject,
   },
-
-  topSection: { flex: 1.2 },
-  bottomSection: { flex: 0.5 },
-  bottomPadding: { flex: 0.5 },
-
-  form: {},
-  field: { gap: Spacing.sm },
+  gradientOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: "55%",
+  },
+  formWrap: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 28,
+  },
+  formInner: {
+    gap: 0,
+  },
+  label: {
+    fontFamily: Fonts.sansMedium,
+    fontWeight: "600",
+    fontSize: 10,
+    letterSpacing: 2.5,
+    color: "rgba(255,255,255,0.4)",
+    textTransform: "uppercase",
+    marginBottom: 12,
+  },
   inputOuter: {
     position: "relative",
-    height: 58,
-    borderRadius: Radius.sm,
-    backgroundColor: "rgba(255,255,255,0.04)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    paddingHorizontal: Spacing.md,
+    height: 60,
+    backgroundColor: "rgba(255,255,255,0.03)",
+    marginBottom: 28,
     justifyContent: "center",
-    overflow: "hidden",
   },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    paddingHorizontal: 8,
   },
   prefix: {
-    fontFamily: Fonts.sansMedium,
-    fontWeight: "500",
-    fontSize: 15,
+    fontFamily: Fonts.sans,
+    fontSize: 18,
+    fontWeight: "400",
+    letterSpacing: 2,
     color: Colors.gold,
-    letterSpacing: Tracking.label,
+    paddingHorizontal: 8,
   },
-  prefixDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.12)",
+  separator: {
+    width: 1,
+    height: 24,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    marginRight: 8,
   },
   input: {
     flex: 1,
     color: Colors.white,
-    fontFamily: Fonts.sansMedium,
-    fontWeight: "500",
-    fontSize: 17,
+    fontFamily: Fonts.sans,
+    fontSize: 20,
+    fontWeight: "300",
     letterSpacing: 3,
     height: 40,
+    paddingHorizontal: 8,
   },
   bottomLine: {
     position: "absolute",
     bottom: 0,
-    left: 12,
-    right: 12,
-    height: 1.5,
+    left: 0,
+    height: 1,
     backgroundColor: Colors.gold,
-    borderRadius: 1,
   },
   btnShimmer: {
     position: "absolute",
@@ -271,12 +324,9 @@ const styles = StyleSheet.create({
     height: "100%",
     opacity: 0.9,
   },
-  footer: {
-    gap: Spacing.md,
-  },
   button: {
     height: 56,
-    borderRadius: Radius.pill,
+    borderRadius: 999,
     overflow: "hidden",
   },
   buttonDisabled: {
@@ -291,24 +341,26 @@ const styles = StyleSheet.create({
   buttonText: {
     fontFamily: Fonts.sansSemibold,
     fontWeight: "600",
-    fontSize: 14,
-    letterSpacing: 1.5,
+    fontSize: 13,
+    letterSpacing: 2.2,
     textTransform: "uppercase",
     color: Colors.obsidian,
   },
   buttonTextDisabled: {
-    color: "rgba(255,255,255,0.2)",
+    color: "rgba(255,255,255,0.18)",
   },
   assurance: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 8,
+    marginTop: 24,
   },
   assuranceText: {
-    fontFamily: Fonts.sans,
-    fontSize: 11,
+    fontFamily: Fonts.sansMedium,
+    fontWeight: "500",
+    fontSize: 9,
+    letterSpacing: 2,
     color: "rgba(255,255,255,0.3)",
-    letterSpacing: 0.5,
   },
 })

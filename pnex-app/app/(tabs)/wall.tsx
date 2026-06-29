@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons } from "@expo/vector-icons"
 import Animated, { FadeInDown } from "react-native-reanimated"
+import * as Haptics from "expo-haptics"
 import { Colors, Fonts, Spacing, Radius, Tracking, TypeSize } from "@/constants/theme"
 
 const { width } = Dimensions.get("window")
@@ -160,6 +161,10 @@ function formatTimer(seconds: number): string {
 export default function Wall() {
   const insets = useSafeAreaInsets()
   const [deals, setDeals] = useState(INITIAL_DEALS)
+
+  useEffect(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+  }, [])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -471,7 +476,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.xl,
   },
   sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: Spacing.md },
-  sectionTitle: { fontFamily: Fonts.serif, fontSize: TypeSize.h2, color: Colors.ink },
+  sectionTitle: { fontFamily: Fonts.serifBold, fontSize: TypeSize.h2, color: Colors.ink },
   filterChip: {
     flexDirection: "row",
     alignItems: "center",
