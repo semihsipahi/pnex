@@ -8,6 +8,8 @@ import { triggerImpact, triggerNotification } from "@/utils/haptics"
 import { Platform } from "react-native"
 import { Colors, Fonts, Spacing, Radius, Tracking, TypeSize } from "@/constants/theme"
 
+const WallColors = { heroCard: "#1C1C1C", cardBg: "#2E2B28", avatarBg: "#1C1C1C" }
+
 const { width } = Dimensions.get("window")
 
 type DealType = "buy" | "sell"
@@ -194,7 +196,7 @@ export default function Wall() {
           imageStyle={styles.heroImg}
         >
           <LinearGradient
-            colors={["rgba(10,10,10,0.55)", "rgba(10,10,10,0.92)"]}
+            colors={["rgba(20,20,20,0.50)", "rgba(20,20,20,0.88)"]}
             style={StyleSheet.absoluteFill}
           />
           <View style={styles.heroTop}>
@@ -293,7 +295,7 @@ function DealCard({ deal }: { deal: Deal }) {
         </View>
         <Text style={styles.cardName} numberOfLines={1}>{deal.firm}</Text>
         <View style={[styles.cardTier, { backgroundColor: TIER_CONFIG[deal.tier].bgColor }]}>
-          <Ionicons name={TIER_CONFIG[deal.tier].icon as any} size={10} color={TIER_CONFIG[deal.tier].color} />
+          <Ionicons name={TIER_CONFIG[deal.tier].icon as any} size={12} color={TIER_CONFIG[deal.tier].color} />
         </View>
         <View style={styles.spacer} />
         {isExpired ? (
@@ -327,8 +329,13 @@ function DealCard({ deal }: { deal: Deal }) {
       </View>
 
       {/* Price + premium */}
-      <Text style={styles.cardPrice}>{deal.price}</Text>
-      <Text style={styles.cardPremiumLabel}>{deal.pricePremium}</Text>
+      <View style={styles.cardPriceRow}>
+        <Text style={styles.cardPrice}>{deal.price}</Text>
+        <View style={styles.cardPriceMeta}>
+          <Text style={styles.cardPricePremium}>{deal.pricePremium}</Text>
+          <Text style={styles.cardPricePremiumLabel}>piyasa üstü</Text>
+        </View>
+      </View>
 
       {/* CTAs — tonal soft fill */}
       {!isExpired && !deal.isOwn && (
@@ -380,7 +387,7 @@ const styles = StyleSheet.create({
   },
   dot: { position: "absolute", top: 10, right: 11, width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.gold },
   heroCard: {
-    backgroundColor: Colors.obsidian,
+    backgroundColor: WallColors.heroCard,
     borderWidth: 1,
     borderColor: "rgba(201,162,75,0.12)",
     borderRadius: Radius.lg,
@@ -494,11 +501,11 @@ const styles = StyleSheet.create({
   filterText: { fontFamily: Fonts.sansMedium, fontWeight: "500", fontSize: 12, color: Colors.ink, letterSpacing: Tracking.tight },
   // Card
   card: {
-    backgroundColor: Colors.onyx,
+    backgroundColor: WallColors.cardBg,
     borderRadius: Radius.lg,
-    paddingVertical: 18,
-    paddingHorizontal: 22,
-    marginBottom: Spacing.md,
+    paddingVertical: 24,
+    paddingHorizontal: 28,
+    marginBottom: Spacing.lg,
     borderWidth: 1,
     borderColor: "rgba(201,162,75,0.12)",
     borderLeftWidth: 0,
@@ -524,7 +531,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 3,
+    height: 4,
     backgroundColor: "rgba(255,255,255,0.07)",
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
@@ -547,31 +554,31 @@ const styles = StyleSheet.create({
   cardHead: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 6,
+    gap: 10,
+    marginBottom: 10,
   },
   cardAvatar: {
-    width: 32,
-    height: 32,
+    width: 40,
+    height: 40,
     borderRadius: 999,
-    backgroundColor: Colors.obsidian,
+    backgroundColor: WallColors.avatarBg,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "rgba(201,162,75,0.3)",
   },
   cardAvatarBuy: { borderColor: "rgba(76,175,80,0.3)" },
-  cardAvatarText: { color: Colors.goldBright, fontFamily: Fonts.serif, fontSize: 14 },
+  cardAvatarText: { color: Colors.goldBright, fontFamily: Fonts.serif, fontSize: 18 },
   cardName: {
     fontFamily: Fonts.sansSemibold,
     fontWeight: "600",
-    fontSize: 13,
+    fontSize: 15,
     color: "#FFFFFF",
     flexShrink: 1,
   },
   cardTier: {
-    width: 18,
-    height: 18,
+    width: 22,
+    height: 22,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
@@ -605,7 +612,7 @@ const styles = StyleSheet.create({
   cardAmount: {
     fontFamily: Fonts.sansSemibold,
     fontWeight: "600",
-    fontSize: 30,
+    fontSize: 34,
     color: "#FFFFFF",
     letterSpacing: -0.5,
     marginTop: 6,
@@ -618,9 +625,9 @@ const styles = StyleSheet.create({
   cardMetaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    marginTop: 2,
-    marginBottom: 14,
+    gap: 6,
+    marginTop: 3,
+    marginBottom: 18,
   },
   cardMetaMidDot: {
     fontFamily: Fonts.sans,
@@ -628,41 +635,54 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.15)",
   },
   cardMetaDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   cardMetaType: {
     fontFamily: Fonts.sansMedium,
-    fontWeight: "500",
-    fontSize: 10,
-    letterSpacing: 1,
+    fontWeight: "600",
+    fontSize: 11,
+    letterSpacing: 1.5,
   },
   // Price
+  cardPriceRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    marginBottom: 16,
+  },
   cardPrice: {
     fontFamily: Fonts.sansSemibold,
     fontWeight: "600",
-    fontSize: 20,
+    fontSize: 22,
     color: Colors.goldBright,
     letterSpacing: -0.3,
-    textAlign: "right",
-    marginBottom: 3,
   },
-  cardPremiumLabel: {
+  cardPriceMeta: {
+    alignItems: "flex-end",
+  },
+  cardPricePremium: {
+    fontFamily: Fonts.sansSemibold,
+    fontWeight: "600",
+    fontSize: 18,
+    color: Colors.goldBright,
+    letterSpacing: -0.3,
+  },
+  cardPricePremiumLabel: {
     fontFamily: Fonts.sans,
     fontSize: 11,
     color: "rgba(201,162,75,0.45)",
-    textAlign: "right",
-    marginBottom: 16,
+    marginTop: 2,
   },
   // CTAs — tonal soft fill
-  cardCtaRow: { flexDirection: "row", gap: 10 },
+  cardCtaRow: { flexDirection: "row", gap: 14 },
   cardCtaOutline: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
     backgroundColor: "rgba(255,255,255,0.08)",
   },
   cardCtaOutlineText: {
@@ -675,8 +695,8 @@ const styles = StyleSheet.create({
     flex: 1.3,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
   },
   cardCtaFullText: {
     fontFamily: Fonts.sansSemibold,
@@ -689,9 +709,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 8,
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
   },
   cardCtaOwnText: {
     fontFamily: Fonts.sans,
