@@ -93,7 +93,7 @@ export function TabBar({ state, navigation, onPlusPress }: TabBarProps) {
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: "#0A0A0A",
+    backgroundColor: "#1C1C1C",
     paddingTop: 8,
   },
   row: {
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     overflow: "hidden",
     borderWidth: 2,
-    borderColor: "#0A0A0A",
+    borderColor: "#1C1C1C",
   },
   plusGradient: {
     ...StyleSheet.absoluteFillObject,

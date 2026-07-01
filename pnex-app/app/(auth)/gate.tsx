@@ -9,6 +9,7 @@ import {
   Image,
   Keyboard,
   Platform,
+  Alert,
 } from "react-native"
 import { useRouter, useLocalSearchParams } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -28,6 +29,7 @@ import Animated, {
 } from "react-native-reanimated"
 import { Colors, Fonts, Spacing } from "@/constants/theme"
 import { GoldButton } from "@/components/GoldButton"
+import { apiService } from "@/services/api"
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window")
 const CODE_LENGTH = 6
@@ -118,14 +120,18 @@ export default function Gate() {
     transform: [{ translateY: keyboardTranslateY.value }],
   }))
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (code.length < CODE_LENGTH) return
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     setLoading(true)
-    setTimeout(() => {
+    try {
+      await apiService.invites.verify(code)
+      router.replace({ pathname: "/(auth)/register", params: { code, phone } })
+    } catch (err: any) {
+      Alert.alert('Geçersiz Kod', err.message || 'Davetiye kodu geçerli değil.')
+    } finally {
       setLoading(false)
-      router.replace({ pathname: "/(auth)/verify", params: { phone } })
-    }, 1100)
+    }
   }
 
   return (
@@ -268,7 +274,20 @@ export default function Gate() {
             style={styles.footerLink}
           >
             <Text style={styles.footerMuted}>Davetiyeniz yok mu?</Text>
-            <Text style={styles.footerAction}>  Bekleme listesine katıl →</Text>
+            <Pressable onPress={async () => {
+              try {
+                setLoading(true)
+                await apiService.invites.joinWaitlist(`+90${phone}`)
+                Alert.alert('Başvuru Alındı', 'Bekleme listesine eklendiniz. Onaylandığınızda bilgilendirileceksiniz.')
+                router.replace('/(auth)/login')
+              } catch (err: any) {
+                Alert.alert('Hata', err.message)
+              } finally {
+                setLoading(false)
+              }
+            }}>
+              <Text style={styles.footerAction}>  Bekleme listesine katıl →</Text>
+            </Pressable>
           </Animated.View>
         </View>
       </Animated.View>

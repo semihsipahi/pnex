@@ -1,11 +1,12 @@
 import { useState } from "react"
-import { View, Text, StyleSheet, ScrollView, Pressable, Modal } from "react-native"
+import { View, Text, StyleSheet, ScrollView, Pressable, Modal, Alert } from "react-native"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons } from "@expo/vector-icons"
 import { Colors, Fonts, Spacing, Radius, Tracking, TypeSize } from "@/constants/theme"
 import { Divider } from "@/components/Divider"
+import { useAuth } from "@/contexts/AuthContext"
 
 const ROWS: { icon: keyof typeof Ionicons.glyphMap; label: string; hint?: string }[] = [
   { icon: "person-circle-outline", label: "Profili Düzenle" },
@@ -16,9 +17,14 @@ const ROWS: { icon: keyof typeof Ionicons.glyphMap; label: string; hint?: string
   { icon: "help-buoy-outline", label: "Danışman Desteği" },
 ]
 
+function getInitials(name: string) {
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+}
+
 export default function Account() {
   const insets = useSafeAreaInsets()
   const router = useRouter()
+  const { user, logout } = useAuth()
   const [showInvites, setShowInvites] = useState(false)
   return (
     <View style={styles.container}>
@@ -33,17 +39,17 @@ export default function Account() {
           />
           <View style={styles.profileRow}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>AM</Text>
+              <Text style={styles.avatarText}>{user ? getInitials(user.name) : '?'}</Text>
             </View>
             <View style={styles.flex}>
               <View style={styles.nameRow}>
-                <Text style={styles.name}>Alexander Mercer</Text>
+                <Text style={styles.name}>{user?.name || '—'}</Text>
                 <Ionicons name="checkmark-circle" size={18} color={Colors.goldBright} />
               </View>
-              <Text style={styles.handle}>@a.mercer · Üye No. 0047</Text>
+              <Text style={styles.handle}>@{user?.handle || '—'} · Üye No. {String(user?.memberNo || '—').padStart(4, '0')}</Text>
               <View style={styles.tierBadge}>
                 <Ionicons name="diamond" size={10} color={Colors.obsidian} />
-                <Text style={styles.tierText}>KURUCU ÜYE</Text>
+                <Text style={styles.tierText}>{(user?.tier || 'MEMBER').replace('_', ' ')}</Text>
               </View>
             </View>
           </View>
@@ -89,7 +95,10 @@ export default function Account() {
             ))}
           </View>
 
-          <Pressable style={styles.signOut} onPress={() => router.replace("/(auth)/login")}>
+          <Pressable style={styles.signOut} onPress={async () => {
+            await logout()
+            router.replace("/(auth)/login")
+          }}>
             <Ionicons name="log-out-outline" size={18} color={Colors.danger} />
             <Text style={styles.signOutText}>Çıkış Yap</Text>
           </Pressable>

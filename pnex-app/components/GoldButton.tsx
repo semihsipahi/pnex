@@ -54,9 +54,10 @@ export function GoldButton({ label, onPress, loading, disabled, variant = "gold"
 
 const styles = StyleSheet.create({
   base: {
-    height: 58,
+    height: 66,
     borderRadius: Radius.pill,
     overflow: "hidden",
+    alignSelf: "stretch",
   },
   fill: {
     flex: 1,
@@ -77,8 +78,8 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: Fonts.sansSemibold,
     fontWeight: "600",
-    fontSize: 15,
-    letterSpacing: 1.5,
+    fontSize: 17,
+    letterSpacing: 2,
     textTransform: "uppercase",
   },
   labelDark: { color: Colors.obsidian },

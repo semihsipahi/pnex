@@ -29,9 +29,12 @@ See `pnex-app/AGENTS.md` for full detail.
 **Key features**: Vault door splash efekti (logo ikiye ayrılır), premium dark tema (altın/gri), animated cell/caret girişleri.
 **Notes**: Tasarım referansı olarak kullanılır. pnex-app'e port edilecek screen'ler bu projeden alınır.
 
-### pnex-api (planned)
-Backend service — will serve pnex-app, pnex-crm, and external integrations.
-Tech stack TBD (likely Node.js/NestJS or Go).
+### pnex-api (active)
+**Stack**: NestJS 11 + TypeScript + MongoDB (Mongoose)
+**Purpose**: Backend service — serves pnex-app, pnex-crm, and external integrations.
+**Auth Flow**: OTP-based phone auth with invitation codes and waitlist system.
+**Commands**: `pnpm start:dev` (port 4000), `pnpm seed`, `pnpm build`
+See `pnex-api/AGENTS.md` for full detail.
 
 ### pnex-integration (planned)
 Middleware for third-party integrations, data pipelines, WebSocket gateways.
@@ -39,6 +42,14 @@ Middleware for third-party integrations, data pipelines, WebSocket gateways.
 ### pnex-crm (planned)
 Admin panel for user management, trade monitoring, settlement oversight.
 Likely a web dashboard (Next.js or similar).
+
+---
+
+### pnex-app (API Integration Status — Aşama 2)
+- Auth flow: `check-phone` → `registered | waitlisted | new` routing
+- OTP login for existing users, invite code + register for new users
+- Waitlist screen for pending users
+- See `pnex-app/AGENTS.md` → **API Integration** section for endpoint details
 
 ---
 

@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from "react"
-import { View, Text, StyleSheet, ScrollView, ImageBackground, Pressable, Dimensions } from "react-native"
+import React, { useEffect, useState, useRef, useCallback } from "react"
+import { View, Text, StyleSheet, ScrollView, ImageBackground, Pressable, Dimensions, ActivityIndicator } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons } from "@expo/vector-icons"
@@ -7,6 +7,12 @@ import Animated, { FadeInDown } from "react-native-reanimated"
 import { triggerImpact, triggerNotification } from "@/utils/haptics"
 import { Platform } from "react-native"
 import { Colors, Fonts, Spacing, Radius, Tracking, TypeSize } from "@/constants/theme"
+import { useAuth } from "@/contexts/AuthContext"
+import { useDeals } from "@/hooks/useDeals"
+import { apiService, DealDto } from "@/services/api"
+import DealDetailModal from "@/components/DealDetailModal"
+import { io, Socket } from "socket.io-client"
+import { API_BASE_URL } from "@/services/api"
 
 const WallColors = { heroCard: "#1C1C1C", cardBg: "#2E2B28", avatarBg: "#1C1C1C" }
 
@@ -32,6 +38,8 @@ interface Deal {
   initialExpiresIn?: number
   status: "active" | "claimed" | "expired"
   offerCount?: number
+  bidderCount?: number
+  bestBid?: string
   isOwn?: boolean
   winner?: string
 }
@@ -48,6 +56,26 @@ const METAL_LABELS: Record<MetalType, string> = {
   usd: "USD",
   eur: "EUR",
 }
+
+const SELL_THEME = {
+  accent: Colors.gold,
+  timerGradient: ["#A67C26", Colors.gold] as [string, string],
+  badgeBg: "rgba(212,175,55,0.15)",
+  ctaBg: "rgba(212,175,55,0.15)",
+  ctaText: Colors.gold,
+  bestBidBg: "rgba(212,175,55,0.08)",
+  borderColor: Colors.gold,
+} as const
+
+const BUY_THEME = {
+  accent: "#2E7D32",
+  timerGradient: ["#1B5E20", "#2E7D32"] as [string, string],
+  badgeBg: "rgba(46,125,50,0.15)",
+  ctaBg: "rgba(46,125,50,0.15)",
+  ctaText: "#2E7D32",
+  bestBidBg: "rgba(46,125,50,0.08)",
+  borderColor: "#2E7D32",
+} as const
 
 const INITIAL_DEALS: Deal[] = [
   {
@@ -67,6 +95,8 @@ const INITIAL_DEALS: Deal[] = [
     initialExpiresIn: 3600,
     status: "active",
     offerCount: 3,
+    bidderCount: 3,
+    bestBid: "2.870 ₺/gr",
     isOwn: true,
   },
   {
@@ -86,6 +116,8 @@ const INITIAL_DEALS: Deal[] = [
     initialExpiresIn: 7200,
     status: "active",
     offerCount: 7,
+    bidderCount: 7,
+    bestBid: "2.580 ₺/gr",
   },
   {
     id: "3",
@@ -103,6 +135,9 @@ const INITIAL_DEALS: Deal[] = [
     expiresIn: 900,
     initialExpiresIn: 3600,
     status: "active",
+    offerCount: 5,
+    bidderCount: 3,
+    bestBid: "38.35 ₺",
   },
   {
     id: "4",
@@ -121,6 +156,8 @@ const INITIAL_DEALS: Deal[] = [
     initialExpiresIn: 7200,
     status: "active",
     offerCount: 2,
+    bidderCount: 2,
+    bestBid: "2.810 ₺/gr",
   },
   {
     id: "5",
@@ -139,6 +176,8 @@ const INITIAL_DEALS: Deal[] = [
     initialExpiresIn: 3600,
     status: "expired",
     offerCount: 11,
+    bidderCount: 6,
+    bestBid: "38.60 ₺",
     winner: "Altınbaş Kuyumculuk",
   },
 ]
@@ -161,30 +200,89 @@ function formatTimer(seconds: number): string {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
 }
 
+function toDealDto(d: DealDto) {
+  const type = d.type === 'SELL' ? 'sell' : 'buy' as DealType
+  const metal = d.metal as MetalType
+  const priceStr = d.type === 'SELL'
+    ? `${d.minPrice?.toLocaleString() || '—'} ₺/gr`
+    : `${d.maxPrice?.toLocaleString() || '—'} ₺/gr`
+  const bestBidStr = d.type === 'SELL'
+    ? `En iyi ${d.offerCount > 0 ? '↑' : '—'}`
+    : `En uygun ${d.offerCount > 0 ? '↓' : '—'}`
+
+  return {
+    id: d.id,
+    firm: d.creator?.name || '—',
+    role: `${d.creator?.tier || ''} · ${d.metal}`,
+    tier: (d.creator?.tier === 'FOUNDING' ? 'FOUNDING' : d.creator?.tier === 'PLATINUM' ? 'FOUNDING' : 'TRUSTED') as 'FOUNDING' | 'INNER' | 'TRUSTED',
+    type,
+    metal,
+    amount: `${d.amount.toLocaleString()} gr`,
+    price: priceStr,
+    pricePremium: priceStr,
+    trust: 4.5,
+    limit: '—',
+    mutual: 0,
+    expiresIn: 0,
+    status: (d.status === 'ACTIVE' ? 'active' : d.status === 'CLOSED' ? 'claimed' : 'expired') as 'active' | 'claimed' | 'expired',
+    offerCount: d.offerCount,
+    bidderCount: d.offerCount,
+    bestBid: bestBidStr,
+    isOwn: d.isOwn,
+    winner: d.winner?.name,
+  }
+}
+
 export default function Wall() {
   const insets = useSafeAreaInsets()
-  const [deals, setDeals] = useState(INITIAL_DEALS)
+  const { deals: apiDeals, loading, error, refetch } = useDeals()
+  const [deals, setDeals] = useState<ReturnType<typeof toDealDto>[]>([])
+  const [selectedDealId, setSelectedDealId] = useState<string | null>(null)
+  const socketRef = useRef<Socket | null>(null)
+
+  const updateDealInList = useCallback((dealId: string, updater: (d: ReturnType<typeof toDealDto>) => ReturnType<typeof toDealDto>) => {
+    setDeals(prev => prev.map(d => d.id === dealId ? updater(d) : d))
+  }, [])
 
   useEffect(() => {
-    console.log("[WALL] mounted, platform:", Platform.OS, "triggering haptic...")
+    setDeals(apiDeals.map(toDealDto))
+  }, [apiDeals])
+
+  useEffect(() => {
     triggerImpact()
     triggerNotification()
-    console.log("[WALL] haptic called")
   }, [])
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setDeals((prev) =>
-        prev.map((d) => {
-          if (d.status !== "active") return d
-          const next = d.expiresIn - 1
-          if (next <= 0) return { ...d, expiresIn: 0, status: "expired" }
-          return { ...d, expiresIn: next }
-        })
-      )
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [])
+    const socket = io(`${API_BASE_URL}/deals`, {
+      transports: ['websocket', 'polling'],
+    })
+    socketRef.current = socket
+
+    socket.on('deal.created', (data: { deal: any }) => {
+      refetch()
+    })
+
+    socket.on('deal.offer.placed', (data: { dealId: string; offer: { userId: string; price: number } }) => {
+      setDeals(prev => prev.map(d =>
+        d.id === data.dealId
+          ? { ...d, offerCount: (d.offerCount || 0) + 1 }
+          : d
+      ))
+    })
+
+    socket.on('deal.closed', (data: { dealId: string }) => {
+      refetch()
+    })
+
+    socket.on('deal.cancelled', (data: { dealId: string }) => {
+      setDeals(prev => prev.filter(d => d.id !== data.dealId))
+    })
+
+    return () => {
+      socket.disconnect()
+    }
+  }, [refetch])
 
   return (
     <View style={styles.container}>
@@ -250,52 +348,62 @@ export default function Wall() {
               key={deal.id}
               entering={FadeInDown.delay(i * 180).duration(600).springify().damping(16)}
             >
-              <DealCard deal={deal} />
+              <DealCard deal={deal} onPress={() => setSelectedDealId(deal.id)} />
             </Animated.View>
           ))}
         </View>
       </ScrollView>
+      <DealDetailModal
+        visible={!!selectedDealId}
+        dealId={selectedDealId || ''}
+        onClose={() => { setSelectedDealId(null); refetch() }}
+      />
     </View>
   )
 }
 
-function DealCard({ deal }: { deal: Deal }) {
+function DealCard({ deal, onPress }: { deal: Deal; onPress: () => void }) {
   const isBuy = deal.type === "buy"
   const isExpired = deal.status !== "active"
   const timerUrgent = deal.expiresIn < 300
-  const accentColor = isBuy ? "#4CAF50" : Colors.goldBright
-  const accentBg = isBuy ? "rgba(76,175,80,0.15)" : "rgba(201,162,75,0.15)"
-  const accentText = isBuy ? "#4CAF50" : Colors.goldBright
+  const theme = isBuy ? BUY_THEME : SELL_THEME
 
   return (
-    <View style={[
-      styles.card,
-      isExpired && styles.cardExpired,
-      !isExpired && (isBuy ? styles.cardBuy : styles.cardSell),
-    ]}>
-      {/* Time border bar */}
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.card,
+        isExpired && styles.cardExpired,
+        !isExpired && { borderLeftColor: theme.borderColor, borderLeftWidth: 3 },
+      ]}>
+      {/* Timer bar */}
       {!isExpired && (
         <View style={styles.cardBorderBar}>
           <View style={[styles.cardBorderFill, { width: `${Math.max(0, (deal.expiresIn / (deal.initialExpiresIn ?? deal.expiresIn)) * 100)}%` }]}>
             <LinearGradient
-              colors={timerUrgent ? [Colors.danger, "#8B2D23"] : ["#B8922E", Colors.goldBright]}
+              colors={timerUrgent ? [Colors.danger, "#8B2D23"] : theme.timerGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={StyleSheet.absoluteFill}
             />
-            <View style={[styles.cardBorderCap, { backgroundColor: timerUrgent ? Colors.danger : Colors.goldBright }]} />
+            <View style={[styles.cardBorderCap, { backgroundColor: timerUrgent ? Colors.danger : theme.accent }]} />
           </View>
         </View>
       )}
 
-      {/* Header: avatar + name + tier + timer */}
+      {/* Header */}
       <View style={styles.cardHead}>
         <View style={[styles.cardAvatar, isBuy && styles.cardAvatarBuy]}>
           <Text style={styles.cardAvatarText}>{deal.firm.charAt(0)}</Text>
         </View>
-        <Text style={styles.cardName} numberOfLines={1}>{deal.firm}</Text>
-        <View style={[styles.cardTier, { backgroundColor: TIER_CONFIG[deal.tier].bgColor }]}>
-          <Ionicons name={TIER_CONFIG[deal.tier].icon as any} size={12} color={TIER_CONFIG[deal.tier].color} />
+        <View style={styles.cardHeadInfo}>
+          <View style={styles.cardHeadTop}>
+            <Text style={styles.cardName} numberOfLines={1}>{deal.firm}</Text>
+            <View style={[styles.cardTier, { backgroundColor: TIER_CONFIG[deal.tier].bgColor }]}>
+              <Ionicons name={TIER_CONFIG[deal.tier].icon as any} size={12} color={TIER_CONFIG[deal.tier].color} />
+            </View>
+          </View>
+          <Text style={styles.cardRole}>{deal.role}</Text>
         </View>
         <View style={styles.spacer} />
         {isExpired ? (
@@ -315,42 +423,56 @@ function DealCard({ deal }: { deal: Deal }) {
         )}
       </View>
 
-      {/* Hero amount */}
+      {/* Type badge */}
+      <View style={styles.cardTypeRow}>
+        <View style={[styles.cardTypeBadge, { backgroundColor: theme.badgeBg }]}>
+          <View style={[styles.cardTypeDot, { backgroundColor: theme.accent }]} />
+          <Text style={[styles.cardTypeText, { color: theme.accent }]}>
+            {isBuy ? "ALIYOR" : "SATIYOR"}
+          </Text>
+        </View>
+      </View>
+
+      {/* Amount */}
       <Text style={styles.cardAmount}>{deal.amount}</Text>
 
-      {/* Metal + type */}
-      <View style={styles.cardMetaRow}>
-        <Text style={styles.cardMetal}>{METAL_LABELS[deal.metal]}</Text>
-        <Text style={styles.cardMetaMidDot}>·</Text>
-        <View style={[styles.cardMetaDot, { backgroundColor: accentColor }]} />
-        <Text style={[styles.cardMetaType, { color: accentColor }]}>
-          {isBuy ? "ALIYOR" : "SATIYOR"}
-        </Text>
-      </View>
+      {/* Metal */}
+      <Text style={styles.cardMetal}>{METAL_LABELS[deal.metal]}</Text>
 
-      {/* Price + premium */}
+      {/* Price comparison row */}
       <View style={styles.cardPriceRow}>
-        <Text style={styles.cardPrice}>{deal.price}</Text>
-        <View style={styles.cardPriceMeta}>
-          <Text style={styles.cardPricePremium}>{deal.pricePremium}</Text>
-          <Text style={styles.cardPricePremiumLabel}>piyasa üstü</Text>
+        <View style={styles.cardPriceBlock}>
+          <Text style={styles.cardPriceLabel}>{isBuy ? "Azami" : "Başlangıç"}</Text>
+          <Text style={styles.cardPriceValue}>{deal.price}</Text>
         </View>
+        {deal.bestBid && !isExpired && (
+          <View style={[styles.cardBestBidBlock, { backgroundColor: theme.bestBidBg }]}>
+            <Text style={[styles.cardBestBidLabel, { color: theme.accent }]}>
+              {isBuy ? "▼ En Düşük" : "▲ En Yüksek"}
+            </Text>
+            <Text style={[styles.cardBestBidValue, { color: theme.accent }]}>
+              {deal.bestBid}
+            </Text>
+          </View>
+        )}
       </View>
 
-      {/* CTAs — tonal soft fill */}
-      {!isExpired && !deal.isOwn && (
-        <View style={styles.cardCtaRow}>
-          <Pressable style={styles.cardCtaOutline}>
-            <Text style={styles.cardCtaOutlineText}>Teklif Ver</Text>
-          </Pressable>
-          <Pressable style={[styles.cardCtaFull, { backgroundColor: accentBg }]}>
-            <Text style={[styles.cardCtaFullText, { color: accentText }]}>Hemen Al</Text>
-          </Pressable>
+      {/* Bid info */}
+      {!isExpired && deal.offerCount != null && (
+        <View style={styles.cardBidInfo}>
+          <Text style={styles.cardBidInfoText}>
+            {deal.offerCount} teklif · {deal.bidderCount ?? 0} {isBuy ? "satıcı" : "alıcı"}
+          </Text>
+          <Text style={styles.cardBidInfoHint}>
+            En {isBuy ? "düşük" : "yüksek"} teklif kazanır
+          </Text>
         </View>
       )}
+
+      {/* Own badge */}
       {deal.isOwn && !isExpired && (
         <View style={styles.cardCtaRow}>
-          <View style={[styles.cardCtaOwn, { backgroundColor: "rgba(255,255,255,0.04)" }]}>
+          <View style={styles.cardCtaOwn}>
             <Ionicons name="eye-off-outline" size={14} color="rgba(255,255,255,0.3)" />
             <Text style={styles.cardCtaOwnText}>Kendi İlanın</Text>
           </View>
@@ -364,7 +486,7 @@ function DealCard({ deal }: { deal: Deal }) {
           </Text>
         </View>
       )}
-    </View>
+    </Pressable>
   )
 }
 
@@ -511,14 +633,6 @@ const styles = StyleSheet.create({
     borderLeftWidth: 0,
     overflow: "hidden",
   },
-  cardBuy: {
-    borderLeftWidth: 3,
-    borderLeftColor: "#4CAF50",
-  },
-  cardSell: {
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.goldBright,
-  },
   cardExpired: {
     opacity: 0.4,
     borderColor: "rgba(255,255,255,0.06)",
@@ -557,6 +671,15 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 10,
   },
+  cardHeadInfo: {
+    flexShrink: 1,
+    gap: 2,
+  },
+  cardHeadTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
   cardAvatar: {
     width: 40,
     height: 40,
@@ -567,7 +690,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(201,162,75,0.3)",
   },
-  cardAvatarBuy: { borderColor: "rgba(76,175,80,0.3)" },
+  cardAvatarBuy: { borderColor: "rgba(46,125,50,0.3)" },
   cardAvatarText: { color: Colors.goldBright, fontFamily: Fonts.serif, fontSize: 18 },
   cardName: {
     fontFamily: Fonts.sansSemibold,
@@ -575,6 +698,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#FFFFFF",
     flexShrink: 1,
+  },
+  cardRole: {
+    fontFamily: Fonts.sans,
+    fontSize: 11,
+    color: "rgba(255,255,255,0.3)",
   },
   cardTier: {
     width: 22,
@@ -608,6 +736,31 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   cardTimerExpiredText: { fontFamily: Fonts.sansSemibold, fontWeight: "600", fontSize: 9, color: "rgba(255,255,255,0.25)", letterSpacing: 0.5 },
+  // Type badge
+  cardTypeRow: {
+    marginTop: 4,
+    marginBottom: 14,
+  },
+  cardTypeBadge: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  cardTypeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  cardTypeText: {
+    fontFamily: Fonts.sansSemibold,
+    fontWeight: "600",
+    fontSize: 11,
+    letterSpacing: 1.5,
+  },
   // Hero amount
   cardAmount: {
     fontFamily: Fonts.sansSemibold,
@@ -619,71 +772,81 @@ const styles = StyleSheet.create({
   },
   cardMetal: {
     fontFamily: Fonts.sans,
-    fontSize: 11,
+    fontSize: 13,
     color: "rgba(255,255,255,0.3)",
-  },
-  cardMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 3,
-    marginBottom: 18,
-  },
-  cardMetaMidDot: {
-    fontFamily: Fonts.sans,
-    fontSize: 11,
-    color: "rgba(255,255,255,0.15)",
-  },
-  cardMetaDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  cardMetaType: {
-    fontFamily: Fonts.sansMedium,
-    fontWeight: "600",
-    fontSize: 11,
-    letterSpacing: 1.5,
+    marginBottom: 16,
   },
   // Price
   cardPriceRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
+    gap: 12,
+    marginBottom: 8,
+  },
+  cardPriceBlock: {
+    gap: 2,
+  },
+  cardPriceLabel: {
+    fontFamily: Fonts.sans,
+    fontSize: 10,
+    color: "rgba(255,255,255,0.25)",
+    letterSpacing: 1,
+  },
+  cardPriceValue: {
+    fontFamily: Fonts.sansSemibold,
+    fontWeight: "600",
+    fontSize: 20,
+    color: "#FFFFFF",
+    letterSpacing: -0.3,
+  },
+  cardBestBidBlock: {
+    alignItems: "flex-end",
+    gap: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  cardBestBidLabel: {
+    fontFamily: Fonts.sansSemibold,
+    fontWeight: "600",
+    fontSize: 10,
+    letterSpacing: 0.5,
+  },
+  cardBestBidValue: {
+    fontFamily: Fonts.sansSemibold,
+    fontWeight: "600",
+    fontSize: 20,
+    letterSpacing: -0.3,
+  },
+  // Bid info
+  cardBidInfo: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
-  cardPrice: {
-    fontFamily: Fonts.sansSemibold,
-    fontWeight: "600",
-    fontSize: 22,
-    color: Colors.goldBright,
-    letterSpacing: -0.3,
-  },
-  cardPriceMeta: {
-    alignItems: "flex-end",
-  },
-  cardPricePremium: {
-    fontFamily: Fonts.sansSemibold,
-    fontWeight: "600",
-    fontSize: 18,
-    color: Colors.goldBright,
-    letterSpacing: -0.3,
-  },
-  cardPricePremiumLabel: {
+  cardBidInfoText: {
     fontFamily: Fonts.sans,
     fontSize: 11,
-    color: "rgba(201,162,75,0.45)",
-    marginTop: 2,
+    color: "rgba(255,255,255,0.3)",
   },
-  // CTAs — tonal soft fill
+  cardBidInfoHint: {
+    fontFamily: Fonts.sans,
+    fontSize: 10,
+    color: "rgba(255,255,255,0.2)",
+    letterSpacing: 0.3,
+  },
+  // CTAs
   cardCtaRow: { flexDirection: "row", gap: 14 },
   cardCtaOutline: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 10,
     backgroundColor: "rgba(255,255,255,0.08)",
+    gap: 2,
   },
   cardCtaOutlineText: {
     fontFamily: Fonts.sansMedium,
@@ -691,18 +854,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#FFFFFF",
   },
+  cardCtaOutlineSub: {
+    fontFamily: Fonts.sansSemibold,
+    fontWeight: "600",
+    fontSize: 11,
+    color: "rgba(255,255,255,0.4)",
+  },
   cardCtaFull: {
     flex: 1.3,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 10,
+    gap: 1,
   },
   cardCtaFullText: {
     fontFamily: Fonts.sansSemibold,
     fontWeight: "600",
-    fontSize: 12,
+    fontSize: 13,
     letterSpacing: 0.5,
+  },
+  cardCtaPremiumText: {
+    fontFamily: Fonts.sansMedium,
+    fontWeight: "500",
+    fontSize: 12,
+    letterSpacing: 0.3,
   },
   cardCtaOwn: {
     flex: 1,
@@ -712,6 +888,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 14,
     borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
   cardCtaOwnText: {
     fontFamily: Fonts.sans,

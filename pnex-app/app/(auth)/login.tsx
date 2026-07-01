@@ -7,6 +7,7 @@ import {
   Pressable,
   Image,
   ActivityIndicator,
+  Alert,
   Keyboard,
   Platform,
   Dimensions,
@@ -16,7 +17,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
-import { triggerImpact } from "@/utils/haptics"
 import Animated, {
   FadeIn,
   useSharedValue,
@@ -28,6 +28,7 @@ import Animated, {
   Easing,
 } from "react-native-reanimated"
 import { Colors, Fonts, Spacing } from "@/constants/theme"
+import { apiService } from "@/services/api"
 
 const { width } = Dimensions.get("window")
 
@@ -115,21 +116,31 @@ export default function Login() {
     buttonScale.value = withSpring(1)
   }
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     if (!isValid || loading) return
     triggerButtonShimmer()
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
-      if (raw === "5555555555") {
-        console.log("[LOGIN] dev shortcut → wall, firing haptic...")
-        triggerImpact()
-        router.replace("/(tabs)/wall")
+
+    try {
+      const fullPhone = `+90${raw}`
+      const result = await apiService.auth.checkPhone(fullPhone)
+
+      if (result.status === 'registered') {
+        router.push({ pathname: '/(auth)/verify', params: { phone: fullPhone } })
+      } else if (result.status === 'waitlisted') {
+        Alert.alert(
+          'Bekleme Listesindesiniz',
+          'Başvurunuz onay bekliyor. Onaylandığınızda bildirim alacaksınız.',
+        )
       } else {
-        router.push({ pathname: "/(auth)/gate", params: { phone: raw } })
+        router.push({ pathname: '/(auth)/gate', params: { phone: fullPhone } })
       }
-    }, 800)
+    } catch (err: any) {
+      Alert.alert('Hata', err.message || 'Bir hata oluştu')
+    } finally {
+      setLoading(false)
+    }
   }, [isValid, loading, raw, router, triggerButtonShimmer])
 
   const handleDone = useCallback(() => {

@@ -1,21 +1,22 @@
 import { useEffect, useRef, useState } from "react"
-import { View, Text, StyleSheet, Pressable, Dimensions, TextInput } from "react-native"
+import { View, Text, StyleSheet, Pressable, Dimensions, TextInput, Alert, Platform } from "react-native"
 import { useRouter, useLocalSearchParams } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
-import { triggerImpact } from "@/utils/haptics"
 import Animated, {
   FadeInDown,
   useSharedValue,
   useAnimatedStyle,
-  withTiming,
   withRepeat,
   withSequence,
+  withTiming,
 } from "react-native-reanimated"
 import { Colors, Fonts, Spacing } from "@/constants/theme"
 import { GoldButton } from "@/components/GoldButton"
+import { apiService } from "@/services/api"
+import { useAuth } from "@/contexts/AuthContext"
 
 const { width } = Dimensions.get("window")
 const LEN = 4
@@ -59,8 +60,14 @@ export default function Verify() {
 
   const displayPhone = maskPhone(phoneParam || "")
 
+  const { login } = useAuth()
+
   useEffect(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    if (phoneParam) {
+      const fullPhone = phoneParam.startsWith('+') ? phoneParam : `+90${phoneParam}`
+      apiService.auth.sendOtp(fullPhone).catch(() => {})
+    }
   }, [])
 
   useEffect(() => {
@@ -79,15 +86,20 @@ export default function Verify() {
 
   const filled = otp.every((d) => d !== "")
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
+    if (!filled || loading) return
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
-      console.log("[VERIFY] navigating to wall, firing haptic...")
-      triggerImpact()
+    try {
+      const fullPhone = phoneParam.startsWith('+') ? phoneParam : `+90${phoneParam}`
+      const code = otp.join('')
+      await login(fullPhone, code)
       router.replace("/(tabs)/wall")
-    }, 1200)
+    } catch (err: any) {
+      Alert.alert('Doğrulama Hatası', err.message || 'Kod geçersiz veya süresi doldu.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -103,7 +115,7 @@ export default function Verify() {
           styles.content,
           {
             paddingTop: insets.top + Spacing.sm,
-            paddingBottom: Math.max(insets.bottom, 16) + Spacing.lg,
+            paddingBottom: Math.max(insets.bottom, 16) + Spacing.lg + 20,
           },
         ]}
       >
@@ -134,6 +146,8 @@ export default function Verify() {
               onPress={() => refs.current[i]?.focus()}
             >
               <TextInput
+                returnKeyType="done"
+                blurOnSubmit
                 ref={(el) => {
                   refs.current[i] = el
                 }}
@@ -144,8 +158,9 @@ export default function Verify() {
                     refs.current[i - 1]?.focus()
                   }
                 }}
-                keyboardType="number-pad"
+                keyboardType={Platform.OS === "ios" ? "decimal-pad" : "number-pad"}
                 maxLength={1}
+                onSubmitEditing={() => i < LEN - 1 ? refs.current[i + 1]?.focus() : refs.current[i]?.blur()}
                 style={styles.otpInput}
                 caretHidden
                 selectionColor={Colors.gold}
@@ -167,7 +182,11 @@ export default function Verify() {
               <Text style={styles.timerGold}>{seconds}sn</Text>
             </Text>
           ) : (
-            <Pressable onPress={() => setSeconds(42)}>
+            <Pressable onPress={async () => {
+              setSeconds(42)
+              const fullPhone = phoneParam.startsWith('+') ? phoneParam : `+90${phoneParam}`
+              try { await apiService.auth.sendOtp(fullPhone) } catch {}
+            }}>
               <Text style={styles.resendActive}>Kodu yeniden gönder</Text>
             </Pressable>
           )}

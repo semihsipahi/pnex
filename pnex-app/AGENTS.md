@@ -263,11 +263,94 @@ Dev shortcut: phone `5555555555` → straight to `(tabs)/wall` (bypasses gate + 
 - `assets/images/wall-hero.png` — Wall page hero background
 - `assets/images/nexa.png` — Legacy, not used anymore (replaced by pnex-logo)
 
+## API Integration (Auth Flow — Aşama 2)
+
+Base URL: `http://localhost:4000`
+
+### Screen Routing (check-phone sonucuna göre)
+
+| `check-phone` sonucu | Gösterilecek Ekran | Açıklama |
+|---------------------|--------------------|----------|
+| `"registered"` | OTP (`verify.tsx`) | Kullanıcı tanıdık, şifre girişi |
+| `"waitlisted"` | WaitlistInfo (yeni screen) | Opak gate görseli + back button |
+| `"new"` | Gate (`gate.tsx`) | Davetiye kodu girişi |
+
+### Endpoint'ler
+
+**Auth**
+- `POST /auth/check-phone` — Login'den sonra ilk çağrı. `{ phone }` → `{ status: "registered" | "waitlisted" | "new" }`
+- `POST /auth/send-otp` — Sadece `"registered"` için. SMS yokken "1111" döner. `{ phone }` → `{ message }`
+- `POST /auth/verify-otp` — 4 haneli OTP doğrula. `{ phone, code }` → `{ accessToken, refreshToken, user }`
+- `POST /auth/register-with-invite` — Kayıt formundan gelen veri. `{ phone, inviteCode, name, handle? }` → `{ accessToken, refreshToken, user }`
+
+**Invites**
+- `POST /invites/verify` — Gate'de kod doğrulama. `{ code }` → `{ valid: true/false, message }`
+- `POST /invites/waitlist` — Bekleme listesine katıl. `{ phone }` → `{ message }`
+
+### Auth State Yönetimi
+
+```typescript
+// AsyncStorage / SecureStore'a kaydedilecek
+interface AuthTokens {
+  accessToken: string
+  refreshToken: string
+}
+
+// API'den dönen user objesi
+interface AuthUser {
+  _id: string
+  phone: string
+  name: string | null
+  handle: string | null
+  memberNo: number
+  tier: string
+  isOnboarded: boolean
+}
+```
+
+### Screen Akışları
+
+**Case 1 — Registered User**
+```
+login.tsx (phone) → POST /auth/check-phone → "registered"
+    → verify.tsx (OTP)
+        → POST /auth/send-otp (arka planda)
+        → POST /auth/verify-otp
+        → JWT al → wall.tsx
+```
+
+**Case 2 — Waitlisted User**
+```
+login.tsx (phone) → POST /auth/check-phone → "waitlisted"
+    → WaitlistInfo screen (geri butonu + bilgi mesajı)
+    → Kullanıcı bekler
+    → Admin onaylayınca push bildirim / tekrar login → artık "registered"
+```
+
+**Case 3 — New User**
+```
+login.tsx (phone) → POST /auth/check-phone → "new"
+    → gate.tsx (6 haneli kod)
+        → POST /invites/verify
+        → Geçerliyse → Kayıt Formu (NewDealModal benzeri bottom sheet)
+            → Firma Adı (required) + Kullanıcı Adı (optional)
+            → POST /auth/register-with-invite
+            → JWT al → wall.tsx
+        → Geçersiz kod → hata mesajı + "Bekleme listesine katıl" linki
+            → POST /invites/waitlist → gate.tsx'e geri dön
+```
+
+### HTTP Header
+```typescript
+// JWT ile korunan tüm endpoint'ler
+Authorization: Bearer <accessToken>
+```
+
 ## Aşama 2 (future — after API project)
-- Invite code entry during registration
-- Real API integration (separate project)
 - Push notifications for bids/requests
 - Live updates via WebSocket
+- Trade request API integration
+- Network/connections API integration
 
 ## Relevant files
 - `app/(tabs)/wall.tsx` — Live auction feed with all UI states (active, own, expired)
